@@ -13,6 +13,7 @@ namespace ElavonPEDTest
             Console.WriteLine("\n\tElavon Payment Simulator");
             Console.WriteLine("\t________________________\n\n");
             int amount = 0;
+            Console.ForegroundColor = ConsoleColor.Green;
 
             using (var api = new ECRUtilATLApi())
             {
@@ -27,8 +28,10 @@ namespace ElavonPEDTest
                 }
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"\tConnection result = {connectResult}\n");
+                   
+                    Console.WriteLine("\t______________________");
+                    Console.WriteLine($"\tConnection result = {connectResult}");
+                    Console.WriteLine("\t______________________\n");
                     Console.ForegroundColor = ConsoleColor.White;
                 }
 
@@ -58,8 +61,6 @@ namespace ElavonPEDTest
                     Console.WriteLine($"Error : {ex}");
                 }
             }
-
-           
         }
    }
 }
