@@ -11,20 +11,19 @@ namespace ElavonPEDTest
     public class ECRUtilATLApi : IDisposable
     {
         TerminalIPAddress termimalIPAddress;
-        TerminalEvent terminalEvent;
+        TerminalEventClass terminalEvent;
         InitTxnReceiptPrint initTxnReceiptPrint;
         TimeDate pedDateTime;
         Status pedStatus;
         TransactionClass transaction;
         TransactionResponse transactionResponse;
         Signature checkSignature;
-        Thread SignatureVerificationThread;
+      //  Thread SignatureVerificationThread;
 
 
         public ECRUtilATLApi()
         {
             transaction = new TransactionClass();
-           
         }
 
         public DiagnosticErrMsg Connect(string ipAddress)
@@ -61,11 +60,9 @@ namespace ElavonPEDTest
         /// </summary>
         public DiagnosticErrMsg Disconnect()
         {
-            Console.WriteLine("Disconnecting...Stop the ECR Server");
+            Console.WriteLine("Disconnecting...");
 
-            //check server is not running.
-            terminalEvent.StopServer();
-            Console.WriteLine($"\nTerminal Stop Check: {Utils.GetDiagRequestString(terminalEvent.DiagRequestOut)}");
+            transaction = null;
 
             DiagnosticErrMsg disconnResult = DiagnosticErrMsg.UknownValue;
 
@@ -117,20 +114,29 @@ namespace ElavonPEDTest
             transaction.Amount1LabelIn = "AMOUNT";
             transaction.TransactionTypeIn = "0";
 
-            //catch signature event and void it
-            SignatureVerificationThread = new Thread(CheckSignatureVerification);
-            SignatureVerificationThread.Start();
+            //check if a signature needed
+            CheckSignatureVerification();
 
             // Launch the transaction
             transaction.DoTransaction();
+           
+            Console.WriteLine($"Terminal Event = {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
 
-            // Trying to abort the signature verification thread if it is alive
-            try { SignatureVerificationThread.Abort(); }
-            catch (Exception ThreadException) { Console.WriteLine(ThreadException.StackTrace); }
-            SignatureVerificationThread = null;
+            if ( transaction.DiagRequestOut == 0) //no error
+            {
+                //display all the returned data
+                Console.WriteLine("No error on transaction: " + Utils.GetTransactionTypeString(Convert.ToInt16(transaction.TransactionStatusOut)));
+            }
+            else
+            {
+                Console.WriteLine("Transaction Error: " + Utils.GetDiagRequestString(transaction.DiagRequestOut));
+                return;
+            }
 
             Console.WriteLine($"Transaction status:{Utils.TransactionOutResult(transaction.TransactionStatusOut)}\n");
-            
+
+     
+
         }
 
         
@@ -138,21 +144,40 @@ namespace ElavonPEDTest
         /// Verify if a Signature is needed 
         /// then Void the transaction if it is
         /// </summary>
-        public void CheckSignatureVerification()
+        public async void CheckSignatureVerification()
         {
-            checkSignature = new SignatureClass();
 
-            Console.WriteLine("Running Check Signature - call the wait terminal event");
+            try
+            {
+                checkSignature = new SignatureClass();
 
-            terminalEvent.WaitTerminalEvent();
-            Console.WriteLine($"Terminal Event = {terminalEvent.EventIdentifierOut}");
+                Console.WriteLine("Running Check Signature - call the wait terminal event");
 
-            //void the signature if set
-            checkSignature.SignatureStatusIn = 0x00; /* SIGN_NOT_ACCEPTED */
-            checkSignature.SetSignStatus();
+                terminalEvent.GetServerState();
+                Console.WriteLine($"Get Event Id before Wait = {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
+                Console.WriteLine("Display Terminal State before wait  : " + Utils.DisplayTerminalStatus(terminalEvent.DiagRequestOut));
 
-            Console.WriteLine($"Signature status : {checkSignature.DiagRequestOut}");
+                // the main thread will continue after the
+                await Task.Run(new Action(terminalEvent.WaitTerminalEvent));
 
+                Console.WriteLine($"Get Event Id after Wait = {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
+                Console.WriteLine("Display Terminal State after wait : " + Utils.DisplayTerminalStatus(terminalEvent.DiagRequestOut));
+
+
+                //void the signature if set
+                checkSignature.SignatureStatusIn = 0x00; /* SIGN_NOT_ACCEPTED */
+                checkSignature.SetSignStatus();
+
+
+                Console.WriteLine($"Signature status : {checkSignature.DiagRequestOut}");
+
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine("Error" + ex);
+            }
+           
            
         }
 
@@ -309,7 +334,7 @@ namespace ElavonPEDTest
         private DiagnosticErrMsg CheckECRServer()
         {
             //Set the Event Server 
-            terminalEvent = new TerminalEvent();
+            terminalEvent = new TerminalEventClass();
 
             // Start the ECR server
             terminalEvent.StartServer();

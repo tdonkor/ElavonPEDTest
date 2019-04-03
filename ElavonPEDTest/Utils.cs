@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ECRUtilATLLib;
 
 namespace ElavonPEDTest
 {
-    public enum TransactionType : ushort
+    public enum TransactionType : short
     {
         Sale = 0,
         Refund = 1,
@@ -26,7 +27,7 @@ namespace ElavonPEDTest
         PreAuthIncrement = 15,
     }
 
-    public enum TxnReceiptState : ushort
+    public enum TxnReceiptState : short
     {
         TXN_RECEIPT_DISABLED = 0,
         TXN_RECEIPT_ENABLED = 1,
@@ -56,7 +57,41 @@ namespace ElavonPEDTest
         ErrorListeningSocket = 18,
         ErrortoAcceptConnection = 19
     }
-   
+
+
+    public enum EventId : short
+    {
+        EV_NONE = 0x00,
+        EV_CHECK_SIGNATURE = 0x01,
+        EV_VOICE_REFERRAL = 0x02,
+        EV_DCC_QUOTATION = 0x03,
+        EV_EFT_AUTOMATIC_SETTLEMENT = 0x04,
+        EV_MTU_AUTOMATIC_SETTLEMENT = 0x05,
+        EV_PASSWORD_ENTRY = 0x06,
+        EV_PARTIAL_AUTH = 0x07,
+        EV_AVS_REJECTION = 0x08,
+        EV_SUSPECTED_FRAUD = 0x09,
+        EV_BATCH_AUTO_CLOSE = 0x0A,
+        EV_GLA_PARTIAL_AUTH = 0x0B,
+        EV_EFT_HOST_DECLINED = 0x0C,
+        EV_DCC_REFUND_CONFIRMATION = 0x0D,
+        EV_MTU_HOST_DECLINED = 0x0E,
+        EV_MTU_OUT_OF_PAPER = 0x0F,
+        EV_AMOUNT_NOT_ELIGIBLE = 0x10,
+        EV_TEAR_REPORT = 0x11,
+        EV_TEAR_RECEIPT = 0x12,
+        EV_TIP_AMOUNT_BYPASS = 0x13,
+        EV_TIP_AMOUNT_END = 0x14,
+        EV_VOID_FAILURE = 0x15,
+        EV_CLEAR_JOURNAL = 0x16,
+        EV_LOYALTY_MEMBER_BYPASS = 0x17,
+        EV_LOYALTY_MEMBER_END = 0x18,
+        EV_CASHBACK_AMOUNT = 0x19,
+        EV_CASHBACK_SELECTION = 0x1A,
+        EV_COMMERCIAL_CODE = 0x1B,
+        EV_PRINT_CUSTOMER_RECEIPT = 0x1C
+    }
+
 
     public struct TransactionResponse
     {
@@ -184,6 +219,51 @@ namespace ElavonPEDTest
             }
                 return transactionOutStr;
         }
+
+
+
+        public static string GetEventRequestString(short eventId)
+        {
+            string eventString;
+
+            switch (eventId)
+            {
+                case 0x00: { eventString = "EV_NONE"; } break;
+                case 0x01: { eventString = "EV_CHECK_SIGNATURE"; } break;
+                case 0x02: { eventString = "EV_VOICE_REFERRAL"; } break;
+                case 0x03: { eventString = "EV_DCC_QUOTATION"; } break;
+                case 0x04: { eventString = "EV_EFT_AUTOMATIC_SETTLEMENT"; } break;
+                case 0x05: { eventString = "EV_MTU_AUTOMATIC_SETTLEMENT"; } break;
+                case 0x06: { eventString = "EV_PASSWORD_ENTRY"; } break;
+                case 0x07: { eventString = "EV_PARTIAL_AUTH"; } break;
+                case 0x08: { eventString = "EV_AVS_REJECTION"; } break;
+                case 0x09: { eventString = "EV_SUSPECTED_FRAUD"; } break;
+                case 0x0A: { eventString = "EV_BATCH_AUTO_CLOSE"; } break;
+                case 0x0B: { eventString = "EV_GLA_PARTIAL_AUTH"; } break;
+                case 0x0C: { eventString = "EV_EFT_HOST_DECLINED"; } break;
+                case 0x0D: { eventString = "EV_DCC_REFUND_CONFIRMATION"; } break;
+                case 0x0E: { eventString = "EV_MTU_HOST_DECLINED"; } break;
+                case 0x0F: { eventString = "EV_MTU_OUT_OF_PAPER"; } break;
+                case 0x10: { eventString = "EV_AMOUNT_NOT_ELIGIBLE"; } break;
+                case 0x11: { eventString = "EV_TEAR_REPORT"; } break;
+                case 0x12: { eventString = "EV_TEAR_RECEIPT"; } break;
+                case 0x13: { eventString = "EV_TIP_AMOUNT_BYPASS"; } break;
+                case 0x14: { eventString = "EV_TIP_AMOUNT_END"; } break;
+                case 0x15: { eventString = "EV_VOID_FAILURE"; } break;
+                case 0x16: { eventString = "EV_CLEAR_JOURNAL"; } break;
+                case 0x17: { eventString = "EV_LOYALTY_MEMBER_BYPASS"; } break;
+                case 0x18: { eventString = "EV_LOYALTY_MEMBER_END"; } break;
+                case 0x19: { eventString = "EV_CASHBACK_AMOUNT"; } break;
+                case 0x1A: { eventString = "EV_CASHBACK_SELECTION"; } break;
+                case 0x1B: { eventString = "EV_COMMERCIAL_CODE"; } break;
+                case 0x1C: { eventString = "EV_PRINT_CUSTOMER_RECEIPT"; } break;
+                default:   { eventString = "Unknown"; } break;
+            }
+
+            return eventString;
+        }
+
+
 
         /// <summary>
         /// checks the DiagRequestOut variable
@@ -455,5 +535,7 @@ namespace ElavonPEDTest
             Console.WriteLine(ticketStr);
 
         }
+
+       
     }
 }
