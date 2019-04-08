@@ -10,6 +10,7 @@ namespace ElavonPEDTest
         static void Main(string[] args)
         {
             string answer = "Y";
+            
 
             while( answer== "Y")
             { 
@@ -42,24 +43,35 @@ namespace ElavonPEDTest
 
 
                     Console.Write("Enter the Amount(no decimal point allowed): ");
-                    amount = int.Parse(Console.ReadLine());
-
-                    var payResult = api.Pay(amount, out var payResponse);
-                    Console.WriteLine($"\nIs Pay Result valid: {Utils.GetDiagRequestString(Convert.ToInt16(payResult))}");
-
-                    if ((DiagnosticErrMsg)Convert.ToInt16(payResponse.DiagRequestOut) == DiagnosticErrMsg.OK)
+                    try
                     {
-                        //display the customer ticket
-                        Utils.CreateCustomerTicket(payResponse);
+                        amount = int.Parse(Console.ReadLine());
+                        var payResult = api.Pay(amount, out var payResponse);
+                        Console.WriteLine($"\nIs Pay Result valid: {Utils.GetDiagRequestString(Convert.ToInt16(payResult))}");
 
-                        //disconnect
-                        api.Disconnect();
+                     
+                        if ((DiagnosticErrMsg)Convert.ToInt16(payResponse.DiagRequestOut) == DiagnosticErrMsg.OK)
+                        {
+                            //display the customer ticket
+                            Utils.CreateCustomerTicket(payResponse);
 
+                            //disconnect
+                            api.Disconnect();
+
+                        }
                     }
+                    catch (Exception ex )
+                    {
 
+                        Console.WriteLine("Error" + ex.Message);
+                    }
+                    
                     Console.Write("\n\nWould you like another transaction?:(Y/N) ");
-                    answer = Console.ReadLine();
-                    answer = answer.ToUpper();
+                    answer = Console.ReadLine().ToUpper();
+                    if (string.IsNullOrEmpty(answer))
+                    {
+                        answer = "Y";
+                    }
 
 
                 }

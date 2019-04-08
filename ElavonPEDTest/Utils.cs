@@ -58,6 +58,13 @@ namespace ElavonPEDTest
         ErrortoAcceptConnection = 19
     }
 
+    public enum TransactionResult
+    {
+        Successful = 48,
+        Cancelled = 54,
+        Failed = 55,
+        RequestReceived = 57
+    }
 
     public enum EventId : short
     {
@@ -194,6 +201,37 @@ namespace ElavonPEDTest
             return amount;
         }
 
+        /// <summary>
+        /// Get the name of Transaction
+        /// </summary>
+        public static string GetTransactionTypeString(short TransactionTypeNum)
+        {
+            string TransactionTypeString;
+
+            switch (TransactionTypeNum)
+            {
+                case (short)TransactionType.Sale: TransactionTypeString = "SALE"; break;
+                case (short)TransactionType.Refund: TransactionTypeString = "REFUND"; break;
+                case (short)TransactionType.Void: TransactionTypeString = "VOID"; break;
+                case (short)TransactionType.Duplicata: TransactionTypeString = "DUPLICATA"; break;
+                case (short)TransactionType.CashAdvance: TransactionTypeString = "CASH ADVANCE"; break;
+                case (short)TransactionType.PWCB: TransactionTypeString = "PWCB"; break;
+                case (short)TransactionType.PreAuth: TransactionTypeString = "PRE-AUTH"; break;
+                case (short)TransactionType.Completion: TransactionTypeString = "COMPLETION"; break;
+                case (short)TransactionType.VerifyAccount: TransactionTypeString = "VERIFY ACCOUNT"; break;
+                case (short)TransactionType.Reversal: TransactionTypeString = "REVERSAL"; break;
+                case (short)TransactionType.Force: TransactionTypeString = "FORCE"; break;
+                case (short)TransactionType.MotoSale: TransactionTypeString = "MOTO SALE"; break;
+                case (short)TransactionType.MotoRefund: TransactionTypeString = "MOTO REFUND"; break;
+                case (short)TransactionType.PreAuthReversal: TransactionTypeString = "PRE-AUTH REVERSAL"; break;
+                case (short)TransactionType.Cancel: TransactionTypeString = "CANCEL"; break;
+                case (short)TransactionType.PreAuthIncrement: TransactionTypeString = "PRE-AUTH INCREMENT"; break;
+                default: TransactionTypeString = "Unknown"; break;
+            }
+
+            return TransactionTypeString;
+        }
+
         public static string TransactionOutResult(string transactionStatusOut)
         {
             string transactionOutStr = string.Empty;
@@ -263,7 +301,60 @@ namespace ElavonPEDTest
             return eventString;
         }
 
+        public static short GetTransactionTypeNum(string TransactionTypeString)
+        {
+            short TransactionTypeNum;
 
+            switch (TransactionTypeString.ToUpper())
+            {
+                case "SALE": { TransactionTypeNum = (short)TransactionType.Sale; } break;
+                case "REFUND": { TransactionTypeNum = (short)TransactionType.Refund; } break;
+                case "VOID": { TransactionTypeNum = (short)TransactionType.Void; } break;
+                case "DUPLICATA": { TransactionTypeNum = (short)TransactionType.Duplicata; } break;
+                case "CASH ADVANCE": { TransactionTypeNum = (short)TransactionType.CashAdvance; } break;
+                case "PWCB": { TransactionTypeNum = (short)TransactionType.PWCB; } break;
+                case "PRE-AUTH": { TransactionTypeNum = (short)TransactionType.PreAuth; } break;
+                case "COMPLETION": { TransactionTypeNum = (short)TransactionType.Completion; } break;
+                case "VERIFY ACCOUNT": { TransactionTypeNum = (short)TransactionType.VerifyAccount; } break;
+                case "REVERSAL": { TransactionTypeNum = (short)TransactionType.Reversal; } break;
+                case "FORCE": { TransactionTypeNum = (short)TransactionType.Force; } break;
+                case "MOTO SALE": { TransactionTypeNum = (short)TransactionType.MotoSale; } break;
+                case "MOTO REFUND": { TransactionTypeNum = (short)TransactionType.MotoRefund; } break;
+                case "PRE-AUTH REVERSAL": { TransactionTypeNum = (short)TransactionType.PreAuthReversal; } break;
+                case "CANCEL": { TransactionTypeNum = (short)TransactionType.Cancel; } break;
+                case "PRE-AUTH INCREMENT": { TransactionTypeNum = (short)TransactionType.PreAuthIncrement; } break;
+                default: { TransactionTypeNum = -1; } break;
+            }
+
+            return TransactionTypeNum;
+        }
+
+        public static TransactionResult GetTransactionOutResult(string transactionStatusOut)
+        {
+            TransactionResult result;
+
+            switch (transactionStatusOut)
+            {
+                case "0":
+                    result = TransactionResult.Successful;
+                    break;
+                case "1":
+                case "2":
+                case "3":
+                case "4":
+                case "5":
+                case "6":
+                    result = TransactionResult.Failed;
+                    break;
+                case "7":
+                    result = TransactionResult.Cancelled;
+                    break;
+                default:
+                    result = TransactionResult.RequestReceived;
+                    break;
+            }
+            return result;
+        }
 
         /// <summary>
         /// checks the DiagRequestOut variable
@@ -356,64 +447,7 @@ namespace ElavonPEDTest
             return result;
         }
 
-        /// <summary>
-        /// Get the name of Transaction
-        /// </summary>
-        public static string GetTransactionTypeString(short TransactionTypeNum)
-        {
-            string TransactionTypeString;
-
-            switch (TransactionTypeNum)
-            {
-                case (short)TransactionType.Sale: TransactionTypeString = "SALE"; break;
-                case (short)TransactionType.Refund: TransactionTypeString = "REFUND"; break;
-                case (short)TransactionType.Void: TransactionTypeString = "VOID"; break;
-                case (short)TransactionType.Duplicata: TransactionTypeString = "DUPLICATA"; break;
-                case (short)TransactionType.CashAdvance: TransactionTypeString = "CASH ADVANCE"; break;
-                case (short)TransactionType.PWCB: TransactionTypeString = "PWCB"; break;
-                case (short)TransactionType.PreAuth: TransactionTypeString = "PRE-AUTH"; break;
-                case (short)TransactionType.Completion: TransactionTypeString = "COMPLETION"; break;
-                case (short)TransactionType.VerifyAccount: TransactionTypeString = "VERIFY ACCOUNT"; break;
-                case (short)TransactionType.Reversal: TransactionTypeString = "REVERSAL"; break;
-                case (short)TransactionType.Force: TransactionTypeString = "FORCE"; break;
-                case (short)TransactionType.MotoSale: TransactionTypeString = "MOTO SALE"; break;
-                case (short)TransactionType.MotoRefund: TransactionTypeString = "MOTO REFUND"; break;
-                case (short)TransactionType.PreAuthReversal: TransactionTypeString = "PRE-AUTH REVERSAL"; break;
-                case (short)TransactionType.Cancel: TransactionTypeString = "CANCEL"; break;
-                case (short)TransactionType.PreAuthIncrement: TransactionTypeString = "PRE-AUTH INCREMENT"; break;
-                default: TransactionTypeString = "Unknown"; break;
-            }
-
-            return TransactionTypeString;
-        }
-
-        public static short GetTransactionTypeNum(string TransactionTypeString)
-        {
-            short TransactionTypeNum;
-
-            switch (TransactionTypeString.ToUpper())
-            {
-                case "SALE": { TransactionTypeNum = (short)TransactionType.Sale; } break;
-                case "REFUND": { TransactionTypeNum = (short)TransactionType.Refund; } break;
-                case "VOID": { TransactionTypeNum = (short)TransactionType.Void; } break;
-                case "DUPLICATA": { TransactionTypeNum = (short)TransactionType.Duplicata; } break;
-                case "CASH ADVANCE": { TransactionTypeNum = (short)TransactionType.CashAdvance; } break;
-                case "PWCB": { TransactionTypeNum = (short)TransactionType.PWCB; } break;
-                case "PRE-AUTH": { TransactionTypeNum = (short)TransactionType.PreAuth; } break;
-                case "COMPLETION": { TransactionTypeNum = (short)TransactionType.Completion; } break;
-                case "VERIFY ACCOUNT": { TransactionTypeNum = (short)TransactionType.VerifyAccount; } break;
-                case "REVERSAL": { TransactionTypeNum = (short)TransactionType.Reversal; } break;
-                case "FORCE": { TransactionTypeNum = (short)TransactionType.Force; } break;
-                case "MOTO SALE": { TransactionTypeNum = (short)TransactionType.MotoSale; } break;
-                case "MOTO REFUND": { TransactionTypeNum = (short)TransactionType.MotoRefund; } break;
-                case "PRE-AUTH REVERSAL": { TransactionTypeNum = (short)TransactionType.PreAuthReversal; } break;
-                case "CANCEL": { TransactionTypeNum = (short)TransactionType.Cancel; } break;
-                case "PRE-AUTH INCREMENT": { TransactionTypeNum = (short)TransactionType.PreAuthIncrement; } break;
-                default: { TransactionTypeNum = -1; } break;
-            }
-
-            return TransactionTypeNum;
-        }
+       
 
         /// <summary>
         /// Get entry method string
@@ -523,7 +557,7 @@ namespace ElavonPEDTest
             ticketContent.Append($"\tTransacion type: {GetTransactionTypeString(Convert.ToInt16(ticket.TransactionStatusOut))}\n");      // Transaction Type
             ticketContent.Append($"\tCurrency: {GetCurrencySymbol(ticket.TerminalCurrencyCodeOut)}\n");
             ticketContent.Append($"\tPurchase Amount: {FormatReceiptAmount(ticket.TotalAmountOut)}\n");  
-            ticketContent.Append($"\tTransaction Date/Time: {(ticket.DateTimeOut)}\n");
+            ticketContent.Append($"\tTransaction Date/Time: {DateTime.Now}\n");
             //ticketContent.Append($"\tTransaction status:{TransactionOutResult(ticket.TransactionStatusOut)}\n");
             ticketContent.Append($"\n\tHost Text out: {ticket.HostTextOut}\n");
             ticketContent.Append("\t_______________________\n");
@@ -536,6 +570,63 @@ namespace ElavonPEDTest
 
         }
 
-       
+        public static void PersistReport(SettlementClass report)
+        {
+            try
+            {
+                StringBuilder reportContent = new StringBuilder();
+                string reportContentStr = string.Empty;
+
+                Console.WriteLine($"Persist Report");
+
+                //get the reponse details for the ticket
+                reportContent.Append($"\tEnd of Day\n");
+                reportContent.Append($"\t================\n\n");
+
+                /* Set the settlement outputs */
+                reportContent.Append($"\tMessageNumber: {report.MessageNumberOut}\n");
+                reportContent.Append($"\tSettlement Status: {report.SettlementStatusOut}\n");
+                reportContent.Append($"\tSettlement Date/Time: {report.SettlementDateTimeOut}\n");
+                reportContent.Append($"\tSettlement Response: {report.SettleResponseOut}\n");
+                reportContent.Append($"\tHelpDesk Number: {report.HelpDeskNumberOut}\n");
+                reportContent.Append($"\tMerchant Name: {report.MerchantNameOut}\n");
+                reportContent.Append($"\tMerchant Addr1: {report.MerchantAddress1Out}\n");
+                reportContent.Append($"\tMerchant Addr2: {report.MerchantAddress2Out}\n");
+                reportContent.Append($"\tMerchant Addr3: {report.MerchantAddress3Out}\n");
+                reportContent.Append($"\tMerchant Addr4: {report.MerchantAddress4Out}\n");
+                reportContent.Append($"\tAcquirer Merchant ID: {report.AcquirerMerchantIDOut}\n");
+                reportContent.Append($"\tTerminal Identifier: {report.TerminalIdentifierOut}\n");
+                reportContent.Append($"\tTerminal Country Code: {report.TerminalCountryCodeOut}\n");
+                reportContent.Append($"\tTerminalCurrencyCodeOut: {report.TerminalCurrencyCodeOut}\n");
+                reportContent.Append($"\tTerminal Currency Exponent: {report.TerminalCurrencyExponentOut}\n");
+                reportContent.Append($"\tBatch Number: {report.BatchNumberOut}\n");
+                reportContent.Append($"\tAcquirer Name: {report.AcquirerNameOut}\n");
+                reportContent.Append($"\tCashbacks Amount: {report.CashbacksAmountOut}\n");
+                reportContent.Append($"\tCashbacks Count: {report.CashbacksCountOut}\n");
+                reportContent.Append($"\tDebit Amount: {report.DebitAmountOut}\n");
+                reportContent.Append($"\tDebit Count: {report.DebitCountOut}\n");
+                reportContent.Append($"\tCredit Amount: {report.CreditAmountOut}\n");
+                reportContent.Append($"\tCredit Count: {report.CreditCountOut}\n");
+                reportContent.Append($"\tSales Void Amount: {report.SalesVoidAmountOut}\n");
+                reportContent.Append($"\tSales Void Count{report.SalesVoidCountOut}\n");
+                reportContent.Append($"\tRefunds Void Amount: {report.RefundsVoidAmountOut}\n");
+                reportContent.Append($"\tRefunds Void Count: {report.RefundsVoidCountOut}\n");
+                reportContent.Append($"\tIs Gratuity Enabled: {report.IsGratuityEnabledOut}\n");
+                reportContent.Append($"\tGratuity Amount: {report.GratuityAmountOut}\n");
+                reportContent.Append($"\tIs Shift Process Enabled: {report.IsShiftProcessEnabledOut}\n");
+                reportContent.Append($"\tSum Or Detail Report: {report.SumOrDetailReportOut}\n");
+                reportContent.Append($"\tTransaction Detail Data Record Number: {report.TransactionDetailDataRecordNumberOut}\n");
+
+                reportContentStr = reportContent.ToString();
+                Console.WriteLine(reportContentStr);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("PersistTicket error." + ex);
+
+            }
+        }
+
     }
 }

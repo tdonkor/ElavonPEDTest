@@ -17,13 +17,16 @@ namespace ElavonPEDTest
         Status pedStatus;
         TransactionClass transaction;
         TransactionResponse transactionResponse;
-        Signature checkSignature;
-      //  Thread SignatureVerificationThread;
+        SignatureClass checkSignature;
+        SettlementClass getSettlement;
+
+
 
 
         public ECRUtilATLApi()
         {
             transaction = new TransactionClass();
+            terminalEvent = new TerminalEventClass();
         }
 
         public DiagnosticErrMsg Connect(string ipAddress)
@@ -63,10 +66,10 @@ namespace ElavonPEDTest
             Console.WriteLine("Disconnecting...");
 
             transaction = null;
-
+            
             DiagnosticErrMsg disconnResult = DiagnosticErrMsg.UknownValue;
 
-            if ((DiagnosticErrMsg)Convert.ToInt32(transactionResponse.DiagRequestOut) == DiagnosticErrMsg.OK)
+            if ((DiagnosticErrMsg)Convert.ToInt16(transactionResponse.DiagRequestOut) == DiagnosticErrMsg.OK)
                 disconnResult = DiagnosticErrMsg.OK;
             else
                 disconnResult = DiagnosticErrMsg.UknownValue;
@@ -74,6 +77,28 @@ namespace ElavonPEDTest
             return disconnResult;
 
         }
+
+        /// <summary>
+        /// Disconect the transaction
+        /// </summary>
+        public SettlementClass EndOfDayReport()
+        {
+            Console.WriteLine("Printing end of day report...");
+
+            getSettlement = new SettlementClass();
+
+            //do the settlement
+            getSettlement.MessageNumberIn = "12";// transaction.MessageNumberOut;
+            getSettlement.DoSettlement();
+            Utils.PersistReport(getSettlement);
+
+            if ((DiagnosticErrMsg)Convert.ToInt16(getSettlement.DiagRequestOut) == DiagnosticErrMsg.OK)
+                return getSettlement;
+            else
+                return null;
+
+        }
+
 
         /// <summary>
         /// The Payment
@@ -97,9 +122,27 @@ namespace ElavonPEDTest
             DoTransaction(amount, TransactionType.Sale.ToString());
 
             result = PopulateResponse(transaction);
-            return (DiagnosticErrMsg)Convert.ToInt32(transaction.DiagRequestOut);
+            return (DiagnosticErrMsg)Convert.ToInt16(transaction.DiagRequestOut);
         }
-        
+
+        /// <summary>
+        /// The Payment
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public DiagnosticErrMsg CancelTransaction(int amount, out TransactionResponse result)
+        {
+            int intAmount = amount;
+            Console.WriteLine($"Cancelling Transaction");
+
+            // Transaction void details
+            //
+            DoTransaction(intAmount, TransactionType.Cancel.ToString());
+
+            result = PopulateResponse(transaction);
+            return (DiagnosticErrMsg)Convert.ToInt16(transaction.DiagRequestOut);
+        }
 
         /// <summary>
         /// Do the financial transaction
@@ -109,78 +152,192 @@ namespace ElavonPEDTest
         public void DoTransaction(int amount, string transactionType)
         {
             Random randomNum = new Random();
-            transaction.MessageNumberIn = randomNum.Next(100).ToString();
+            transaction.MessageNumberIn = randomNum.Next(10, 99).ToString();
+           
             transaction.Amount1In = amount.ToString().PadLeft(12, '0'); 
             transaction.Amount1LabelIn = "AMOUNT";
-            transaction.TransactionTypeIn = "0";
+            transaction.TransactionTypeIn = "0"; //sale
+           
 
             //check if a signature needed
-            CheckSignatureVerification();
+            CheckforEvent();
 
             // Launch the transaction
             transaction.DoTransaction();
-           
-            Console.WriteLine($"Terminal Event = {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
+            Console.WriteLine($"Terminal Event Id : {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
 
             if ( transaction.DiagRequestOut == 0) //no error
             {
                 //display all the returned data
-                Console.WriteLine("No error on transaction: " + Utils.GetTransactionTypeString(Convert.ToInt16(transaction.TransactionStatusOut)));
+                Console.WriteLine("Transaction Success: " + Utils.GetTransactionTypeString(Convert.ToInt16(transaction.TransactionStatusOut)));
             }
             else
             {
                 Console.WriteLine("Transaction Error: " + Utils.GetDiagRequestString(transaction.DiagRequestOut));
-                return;
+
             }
 
             Console.WriteLine($"Transaction status:{Utils.TransactionOutResult(transaction.TransactionStatusOut)}\n");
+            Console.WriteLine("Display Terminal State : " + Utils.DisplayTerminalStatus(terminalEvent.DiagRequestOut));
 
-     
 
         }
 
         
         /// <summary>
-        /// Verify if a Signature is needed 
-        /// then Void the transaction if it is
+        /// Verify if a Signature is needed this is the only event we need 
+        /// to catch and then Void the transaction
         /// </summary>
-        public async void CheckSignatureVerification()
+        public async void CheckforEvent()
         {
-
             try
             {
-                checkSignature = new SignatureClass();
-
-                Console.WriteLine("Running Check Signature - call the wait terminal event");
-
                 terminalEvent.GetServerState();
-                Console.WriteLine($"Get Event Id before Wait = {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
-                Console.WriteLine("Display Terminal State before wait  : " + Utils.DisplayTerminalStatus(terminalEvent.DiagRequestOut));
 
-                // the main thread will continue after the
+                Console.WriteLine("Calling WaitTerminal Event.....");
                 await Task.Run(new Action(terminalEvent.WaitTerminalEvent));
 
-                Console.WriteLine($"Get Event Id after Wait = {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
-                Console.WriteLine("Display Terminal State after wait : " + Utils.DisplayTerminalStatus(terminalEvent.DiagRequestOut));
+                if (terminalEvent.EventIdentifierOut != 0x00 /* EV_NONE */)
+                {
+                    switch (terminalEvent.EventIdentifierOut)
+                    {
+                        case 0x01:
+                            {
+                                checkSignature = new SignatureClass();
+                                //void the signature if set
+                                checkSignature.SignatureStatusIn = 0x00; /* SIGN_NOT_ACCEPTED */
+                                checkSignature.SetSignStatus();
+                                Console.WriteLine($"Signature Event status : {Utils.GetDiagRequestString(checkSignature.DiagRequestOut)}");
 
+                            }
+                            break;
 
-                //void the signature if set
-                checkSignature.SignatureStatusIn = 0x00; /* SIGN_NOT_ACCEPTED */
-                checkSignature.SetSignStatus();
+                        case 0x02: //Voice Verification Event
+                            {
+                                VoiceReferralClass voiceRef = new VoiceReferralClass();
+                                voiceRef.AuthorisationCodeIn = ""; 
+                                voiceRef.AuthorisationStatusIn = 0x00; //cancel
+                                voiceRef.SetAuthorisation();
+                                Console.WriteLine($"VoiceReferral Event status : {Utils.GetDiagRequestString(voiceRef.DiagRequestOut)}");
+                            }
+                            break;
+                        case 0x07: //Partial Auth Event
+                            {
+                                PartialAuthClass partialAuth = new PartialAuthClass();
+                                partialAuth.PartialAuthStatusIn = 0x01; // decline
+                                partialAuth.SetPatialAuthStatus();
+                                Console.WriteLine($"partial Auth Event status : {Utils.GetDiagRequestString(partialAuth.DiagRequestOut)}");
 
+                            }
+                            break;
+                        case 0x09: //Suspected Fraud Event
+                            {
+                                SuspectedFraudClass susFraud = new SuspectedFraudClass();
+                                susFraud.SuspectedFrdStatusIn = 0;
+                                susFraud.SetSuspectedFraudStatus();
+                                Console.WriteLine($"Suspected Fraud Event status : {Utils.GetDiagRequestString(susFraud.DiagRequestOut)}");
+                            }
+                            break;
+                        case 0x0B: //Fanfare Partial Auth Event 
+                            {
+                                FanfarePartialAuthClass fanfarePartialAuth = new FanfarePartialAuthClass();
+                                fanfarePartialAuth.PartialAuthStatusIn = 0x01; // decline
+                                Console.WriteLine($"Fanfare Partial Auth Event status : {Utils.GetDiagRequestString(fanfarePartialAuth.DiagRequestOut)}");
 
-                Console.WriteLine($"Signature status : {checkSignature.DiagRequestOut}");
+                            }
+                            break;
+                        case 0x0C: //EFT Host Declined Event
+                            {
+                                EFTHostDeclinedClass eftDeclined = new EFTHostDeclinedClass();
 
+                                //send the ackknowledgement
+                                Console.WriteLine($"Host Decline message: {eftDeclined.HostMessageOut}");
+                                eftDeclined.SendHostDeclinedAck();
+                                Console.WriteLine($"EFT Host Declined Event status : {Utils.GetDiagRequestString(eftDeclined.DiagRequestOut)}");
+                              
+                            }
+                            break;
+
+                        case 0x0D: //DCC Refund Confirmation Event
+                            {
+                                DCCRefundConfirmationClass dccRefund = new DCCRefundConfirmationClass();
+                                dccRefund.DCCRefundConfirmStatusIn = 0x01; //decline dcc refund
+                                dccRefund.SetDCCRefundConfirmStatus();
+                                Console.WriteLine($"CDCC Refund Confirmation Event Status  : {Utils.GetDiagRequestString(dccRefund.DiagRequestOut)}");
+                            }
+                            break;
+
+                        case 0x0E: //MTU HostDeclinedEvent
+                            {
+                                MTUHostDeclinedClass mTUHostDeclined = new MTUHostDeclinedClass();
+                                mTUHostDeclined.SendHostDeclinedAck();
+                                Console.WriteLine($"MTUHost Declined Class Event status : {Utils.GetDiagRequestString(mTUHostDeclined.DiagRequestOut)}");
+
+                            }
+                            break;
+
+                        case 0x10: //Amount Not Eligible Event;
+                            {
+                                AmountNotEligibleClass amountNotEleg = new AmountNotEligibleClass();
+                                amountNotEleg.SendAmountNotEligibleAck();
+                                Console.WriteLine($"Amount Not Eligible Event status : {Utils.GetDiagRequestString(amountNotEleg.DiagRequestOut)}");
+       
+                            }
+                            break;
+
+                        case 0x1A: //Cashback Selection Event
+                            {
+                                CashbackSelectionClass cashBackSelect = new CashbackSelectionClass();
+                                //don't accept cashback
+                                cashBackSelect.CashbackSelectionStatusIn = 0x01;
+                                cashBackSelect.SetCashbackSelectionStatus();
+                                Console.WriteLine($"Cashback Selection Event Status : {Utils.GetDiagRequestString(cashBackSelect.DiagRequestOut)}");
+                               
+                            }
+                            break;
+                       
+                        case 0x15: //Void Failure Event
+                            {
+                                VoidFailureClass voidFailure = new VoidFailureClass();
+                                voidFailure.SendVoidFailureAck();
+                                Console.WriteLine($"Void Failure Event status : {Utils.GetDiagRequestString(voidFailure.DiagRequestOut)}");
+ 
+                            }
+                            break;
+                        //ignore any of these events we don't need to deal with any of these.
+                        
+                        case 0x03: //DCC Quotation Information Event
+                        case 0x04: //Automatic Settlement Event
+                        case 0x05: //Automatic MTU Settlement Event
+                        case 0x06: //Password InformationEvent
+                        case 0x08: //AVS Rejection Event
+                        case 0x0A: //Batch Auto Close Event
+                        case 0x0F: //MTU Out Of PaperEvent
+                        case 0x11: //Tear Report Event
+                        case 0x12: //Tear Receipt Event
+                        case 0x13: //Tip Amount By Pass Event
+                        case 0x14: //Tip Amount End Event
+                        case 0x16: //Clear JournalEvent
+                        case 0x17: //Loyalty Member ByPass Event
+                        case 0x18: //Loyalty Member End Event
+                        case 0x19: //Cashback Amount Event
+                        case 0x1B: //Commercial Code Event
+                        case 0x1C: //Print CustReceipt Event
+                            break;
+                        default:
+                           
+                            break;
+                    }                  
+                }                            
+                Console.WriteLine($"Event Id : {Utils.GetEventRequestString(terminalEvent.EventIdentifierOut)}");
+                Console.WriteLine("Display Terminal State : " + Utils.DisplayTerminalStatus(terminalEvent.DiagRequestOut));
             }
             catch (Exception ex)
             {
 
                 Console.WriteLine("Error" + ex);
-            }
-           
-           
+            }           
         }
-
 
         /// <summary>
         /// Populate the transactionResponse object
@@ -334,7 +491,7 @@ namespace ElavonPEDTest
         private DiagnosticErrMsg CheckECRServer()
         {
             //Set the Event Server 
-            terminalEvent = new TerminalEventClass();
+            //terminalEvent = new TerminalEventClass();
 
             // Start the ECR server
             terminalEvent.StartServer();
